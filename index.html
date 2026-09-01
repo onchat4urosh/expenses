@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LuxBuild - Construction Tracker</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#6b46c1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LuxBuild">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1033/1033090.png">
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f4f5f9; color: #1f2937; padding-bottom: 75px; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+    
+    /* Header */
+    header { background: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
+    .header-profile { display: flex; align-items: center; gap: 8px; }
+    .avatar { width: 36px; height: 36px; background: #6b46c1; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
+    .brand-title { font-weight: 700; font-size: 14px; }
+    .brand-subtitle { font-size: 10px; color: #6b7280; }
+    .header-controls { display: flex; align-items: center; gap: 12px; }
+    .project-selector { background: #f0efff; color: #4338ca; border: none; padding: 10px 12px; border-radius: 16px; font-weight: 600; font-size: 12px; max-width: 130px; text-overflow: ellipsis; outline: none; }
+    .btn-add-client-icon { background: #6b46c1; color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+    /* Empty State */
+    .empty-state { text-align: center; padding: 40px 20px; background: #fff; border-radius: 16px; margin: 20px 0; }
+    .empty-state-icon { font-size: 48px; margin-bottom: 12px; color: #9ca3af; }
+    .empty-state-title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+    .empty-state-sub { font-size: 12px; color: #6b7280; margin-bottom: 16px; }
+
+    /* Tabs */
+    .tab-content { display: none; padding: 16px; }
+    .tab-content.active { display: block; }
+    
+    /* Cards & General Elements */
+    .card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-title { font-weight: 700; font-size: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .fund-card { background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%); color: #fff; border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+    .fund-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; font-weight: 600; }
+    .fund-amount { font-size: 26px; font-weight: 800; margin: 4px 0 12px 0; }
+    .fund-stats { display: flex; gap: 10px; margin-bottom: 12px; }
+    .stat-box { flex: 1; background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); padding: 8px 12px; border-radius: 10px; }
+    .stat-title { font-size: 10px; text-transform: uppercase; opacity: 0.8; }
+    .stat-val { font-weight: 700; font-size: 14px; }
+
+    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #6b7280; }
+    .info-val { font-weight: 600; text-align: right; }
+    .action-icon { color: #6b46c1; cursor: pointer; font-weight: bold; font-size: 16px; }
+
+    .due-card { background: #fff; border-radius: 16px; padding: 16px; border-left: 4px solid #ef4444; }
+    .due-item { display: flex; justify-content: space-between; align-items: center; background: #f9fafb; padding: 10px 12px; border-radius: 10px; margin-top: 8px; }
+    .due-name { font-weight: 600; font-size: 13px; }
+    .due-date { font-size: 11px; color: #9ca3af; }
+    .due-amount { color: #ef4444; font-weight: 700; font-size: 14px; }
+
+    /* Search & Filter Component */
+    .search-input { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; background: #fff; outline: none; margin-bottom: 12px; }
+    .filter-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
+    .filter-scroll::-webkit-scrollbar { display: none; }
+    .chip { padding: 6px 14px; background: #eef2ff; color: #4f46e5; border-radius: 16px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; border: none; }
+    .chip.active { background: #6b46c1; color: #fff; }
+
+    /* Expenses & Payments UI */
+    .toggle-group { display: flex; background: #f3f4f6; padding: 3px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .toggle-btn { flex: 1; text-align: center; padding: 5px 12px; border-radius: 16px; cursor: pointer; color: #6b7280; }
+    .toggle-btn.active { background: #6b46c1; color: #fff; }
+
+    .stage-card { background: #fff; border-radius: 16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease-in-out; border: 1px solid #e5e7eb; }
+    .stage-header { display: flex; justify-content: space-between; align-items: center; }
+    .stage-num { width: 26px; height: 26px; background: #f0efff; color: #6b46c1; border-radius: 50%; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .stage-title { font-size: 14px; font-weight: 700; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin: 8px 0; }
+    .progress-fill { height: 100%; background: #6b46c1; border-radius: 3px; }
+    .stage-sub { font-size: 11px; color: #6b7280; display: flex; justify-content: space-between; }
+
+    /* Parsed Info Sheets UI */
+    .headline-block { background: #fff; border-radius: 14px; margin-bottom: 14px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .headline-title { background: #d1d5db; color: #111827; font-weight: 800; padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #9ca3af; text-transform: capitalize; }
+    .info-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .info-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; vertical-align: top; }
+    .info-table tr:last-child td { border-bottom: none; }
+    .item-title { font-weight: 700; color: #111827; font-size: 12px; margin-bottom: 2px; }
+    .item-desc { color: #4b5563; font-size: 11px; line-height: 1.3; }
+    .item-metrics { font-weight: 600; color: #6b7280; font-size: 11px; white-space: nowrap; text-align: right; }
+
+    /* Modals */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 200; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 20px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.2s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 16px; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-label { font-size: 11px; color: #6b7280; font-weight: 600; margin-bottom: 4px; display: block; text-transform: uppercase; }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; outline: none; background: #f9fafb; }
+    .btn-submit { width: 100%; padding: 12px; background: #6b46c1; color: #fff; border: none; border-radius: 12px; font-weight: 700; font-size: 15px; margin-top: 10px; cursor: pointer; }
+    .btn-secondary { width: 100%; padding: 10px; background: #fff; color: #6b46c1; border: 1.5px dashed #6b46c1; border-radius: 12px; font-weight: 700; font-size: 13px; margin-top: 8px; cursor: pointer; }
+
+    /* Navigation */
+    nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: #9ca3af; text-decoration: none; font-size: 10px; font-weight: 600; cursor: pointer; flex: 1; }
+    .nav-item.active { color: #6b46c1; }
+    .nav-icon { font-size: 18px; margin-bottom: 2px; }
+
+    /* Collapsible Extensions */
+    .stage-card-body { transition: max-height 0.25s ease, opacity 0.2s ease; overflow: hidden; }
+    .stage-card.collapsed .stage-card-body { display: none; }
+    .stage-chevron { cursor: pointer; transition: transform 0.2s ease; font-size: 12px; margin-right: 6px; user-select: none; }
+    .stage-card.collapsed .stage-chevron { transform: rotate(-90deg); }
+
+    /* Swipe Item Wrapper */
+    .swipe-container { position: relative; overflow: hidden; border-radius: 14px; margin-bottom: 10px; touch-action: pan-y; }
+    .swipe-content { position: relative; background: #fff; z-index: 2; transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); margin-bottom: 0 !important; }
+    .swipe-action { position: absolute; top: 0; bottom: 0; width: 100%; display: flex; align-items: center; font-weight: 700; font-size: 13px; color: #fff; z-index: 1; }
+    .swipe-action-edit { left: 0; background: #6b46c1; justify-content: flex-start; padding-left: 20px; }
+    .swipe-action-delete { right: 0; background: #ef4444; justify-content: flex-end; padding-right: 20px; }
+	
+    /* Interactive Badges & Cards */
+    .stage-status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+    .status-completed { background: #d1fae5; color: #059669; }
+    .status-progress { background: #e0e7ff; color: #4338ca; }
+    .status-pending { background: #f3f4f6; color: #6b7280; }
+
+    .quick-pay-container { display: flex; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f3f4f6; }
+    .quick-pay-input { flex: 1; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; outline: none; }
+    .quick-pay-btn { background: #6b46c1; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+    .expense-card { background: #ffffff; border-radius: 14px; border: 1px solid #f0f0f0; padding: 12px 14px; transition: all 0.2s ease; cursor: pointer; }
+    .expense-cat-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; background: #f3f4f6; color: #4b5563; }
+    .cat-materials { background: #e0e7ff; color: #3730a3; }
+    .cat-labor { background: #fef3c7; color: #92400e; }
+    .cat-transport { background: #e0f2fe; color: #075985; }
+    .cat-hardware { background: #f3e8ff; color: #6b21a8; }
+
+    .status-toggle-btn { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; cursor: pointer; border: none; transition: transform 0.1s ease; }
+    .status-toggle-btn.due { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+    .status-toggle-btn.paid { background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; }
+    
+    .expense-expandable-notes { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e7eb; font-size: 12px; color: #4b5563; display: none; }
+    .expense-card.expanded .expense-expandable-notes { display: block; }
+
+    .sticky-expense-header { position: sticky; top: 61px; background: #f4f5f9; z-index: 80; padding-top: 4px; padding-bottom: 8px; }
+    .expense-title-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 6px 0; }
+    .expense-section-title { font-weight: 700; font-size: 12px; color: #ef4444; letter-spacing: 0.5px; }
+
+    .btn-add-expense { background: #6b46c1; color: #ffffff; border: none; padding: 6px 12px; border-radius: 14px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .icon-tags-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .tag-chip { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: #f3f4f6; border: 1.5px solid #e5e7eb; border-radius: 20px; font-size: 12px; font-weight: 600; color: #4b5563; cursor: pointer; }
+    .tag-chip.active { background: #f3e8ff; border-color: #6b46c1; color: #6b46c1; }
+
+    .analysis-item { margin-bottom: 12px; cursor: pointer; }
+    .analysis-row-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .analysis-label { display: flex; align-items: center; gap: 8px; color: #374151; }
+    .analysis-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .analysis-values { display: flex; align-items: baseline; gap: 6px; }
+    .analysis-amount { font-weight: 800; color: #111827; }
+    .analysis-pct { font-size: 11px; color: #9ca3af; font-weight: 500; }
+    .analysis-progress-bg { width: 100%; height: 6px; background-color: #f3f4f6; border-radius: 4px; overflow: hidden; }
+    .analysis-progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-profile">
+      <div class="avatar">L</div>
+      <div>
+        <div class="brand-title">LuxBuild</div>
+        <div class="brand-subtitle"><div id="sync-status-text">Construction Tracker</div></div>
+      </div>
+    </div>
+    <div class="header-controls">
+      <select class="project-selector" id="client-dropdown" onchange="switchClient(this.value)">
+        <option value="">No Clients</option>
+      </select>
+      <button class="btn-add-client-icon" onclick="openNewClientModal()" title="Add New Client">+</button>
+    </div>
+  </header>
+
+  <!-- HOME TAB -->
+  <div id="tab-home" class="tab-content active">
+    <div class="fund-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div class="fund-label">Available Site Funds</div>
+          <div class="fund-amount" id="home-available-funds">₹0</div>
+        </div>
+      </div>
+      <div class="fund-stats">
+        <div class="stat-box">
+          <div class="stat-title">Receipts ↙</div>
+          <div class="stat-val" id="home-total-received">₹0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">Expenses ↗</div>
+          <div class="stat-val" id="home-total-expenses">₹0</div>
+        </div>
+      </div>
+      <div style="justify-content: space-between; align-items: center; display: flex; gap: 8px;">
+        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        <button class="btn-secondary" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); margin: 0;" onclick="document.getElementById('csvFileInput').click()">📁 Import CSV</button>
+      </div>
+    </div>
+
+    <div id="home-main-content"></div>
+  </div>
+
+  <!-- EXPENSES TAB -->
+  <div id="tab-expenses" class="tab-content">
+    <div class="card analysis-card">
+      <div class="card-title">
+        <span>ANALYSIS</span>
+        <div class="toggle-group" id="analysis-toggle-group">
+          <div class="toggle-btn active" id="btn-ana-cat" onclick="switchAnalysisMode('category')">CATEGORY</div>
+          <div class="toggle-btn" id="btn-ana-stage" onclick="switchAnalysisMode('stage')">BY STAGE</div>
+        </div>
+      </div>
+      <div id="expense-analysis-list"></div>
+    </div>
+
+    <div class="sticky-expense-header">
+      <input type="text" id="expense-search" class="search-input" placeholder="🔍 Search vendor, notes, date..." oninput="renderExpenses()">
+      <div class="filter-scroll" id="expense-stage-chips"></div>
+      
+      <div class="expense-title-row">
+        <span class="expense-section-title">EXPENSES</span>
+        <button class="btn-add-expense" onclick="openExpenseModal()">+ New Expense</button>
+      </div>
+    </div>
+
+    <div id="expenses-scroll-container">
+      <div id="expenses-list"></div>
+    </div>
+  </div>
+
+  <!-- PAYMENTS TAB -->
+  <div id="tab-payments" class="tab-content">
+    <div class="card">
+      <div style="font-size: 11px; color: #6b7280; font-weight: 700;">TOTAL PROJECT VALUE</div>
+      <div style="font-size: 22px; font-weight: 800; margin: 4px 0;" id="pay-total-val">₹0</div>
+      <div class="progress-bar"><div class="progress-fill" id="pay-total-progress" style="width: 0%;"></div></div>
+      <div class="stage-sub">
+        <span id="pay-total-paid" style="color: #10b981; font-weight: 700;">Paid: ₹0</span>
+        <span id="pay-total-balance" style="color: #ef4444; font-weight: 700;">Balance: ₹0</span>
+      </div>
+    </div>
+
+    <div id="stages-list"></div>
+    <button class="btn-secondary" onclick="openNewStageModal()">+ Add New Stage</button>
+  </div>
+
+  <!-- INFO TAB -->
+  <div id="tab-info" class="tab-content">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="card-title" style="margin: 0;">Saved Sheets</div>
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+        <button class="btn-secondary" style="margin: 0; width: auto; padding: 6px 12px;" onclick="document.getElementById('excel-file-input').click()">📁 Upload Excel</button>
+      </div>
+      <select id="excel-sheet-selector" class="form-control" onchange="onExcelSheetChange(this.value)">
+        <option value="">-- No Sheets Uploaded --</option>
+      </select>
+    </div>
+
+    <input type="text" id="info-search" class="search-input" placeholder="🔍 Search specs, materials, hardware..." oninput="renderParsedInfoSheet()">
+    <div class="filter-scroll" id="info-filter-chips"></div>
+    <div id="info-sheet-container" style="margin-top: 10px;"></div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav>
+    <div class="nav-item active" onclick="switchTab('home')">
+      <span class="nav-icon">⌂</span>
+      Home
+    </div>
+    <div class="nav-item" onclick="switchTab('expenses')">
+      <span class="nav-icon">🧾</span>
+      Expenses
+    </div>
+    <div class="nav-item" onclick="switchTab('payments')">
+      <span class="nav-icon">💳</span>
+      Payments
+    </div>
+    <div class="nav-item" onclick="switchTab('info')">
+      <span class="nav-icon">ℹ️</span>
+      Info
+    </div>
+  </nav>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <script>
+    // Explicitly Clear Sample Data & Local Storage on Request
+    localStorage.clear();
+
+    const defaultStageTemplates = [
+      { id: "1", name: "Advance", amount: 0 },
+      { id: "2", name: "Material Procurement", amount: 0 },
+      { id: "3", name: "Shutters and Hardware", amount: 0 },
+      { id: "4", name: "Final", amount: 0 }
+    ];
+
+    // Fresh, empty initial DB without sample records
+    let db = {
+      activeClientId: null,
+      clients: []
+    };
+
+    let currentTab = 'home';
+    let currentAnalysisMode = 'category';
+    let selectedExpenseStageFilter = 'All';
+    let selectedInfoCategoryFilter = 'All';
+    let selectedSheetId = '';
+    let isProjectDetailsCollapsed = false;
+    let expandedExpenses = {};
+    let collapsedStages = {};
+
+    function saveData() {
+      localStorage.setItem('luxbuild_pwa_db', JSON.stringify(db));
+      render();
+    }
+
+    function getActiveClient() {
+      if (!db.activeClientId && db.clients.length > 0) {
+        db.activeClientId = db.clients[0].id;
+      }
+      return db.clients.find(c => c.id === db.activeClientId) || null;
+    }
+
+    const formatINR = num => '₹' + Number(num || 0).toLocaleString('en-IN');
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      const navIndices = { home: 0, expenses: 1, payments: 2, info: 3 };
+      document.querySelectorAll('.nav-item')[navIndices[tab]].classList.add('active');
+      render();
+    }
+
+    function switchClient(clientId) {
+      db.activeClientId = clientId;
+      const client = getActiveClient();
+      selectedSheetId = client?.sheets[0]?.id || '';
+      saveData();
+    }
+
+    // App Renderer
+    function render() {
+      const client = getActiveClient();
+
+      // Render Dropdown
+      const dropdownElem = document.getElementById('client-dropdown');
+      if (db.clients.length === 0) {
+        dropdownElem.innerHTML = `<option value="">No Clients</option>`;
+      } else {
+        dropdownElem.innerHTML = db.clients.map(c => `<option value="${c.id}" ${c.id === client?.id ? 'selected' : ''}>${c.name}</option>`).join('');
+      }
+
+      if (!client) {
+        renderEmptyState();
+        return;
+      }
+
+      // Financials
+      const totalReceived = client.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalExpenses = client.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const availableFunds = totalReceived - totalExpenses;
+
+      document.getElementById('home-available-funds').innerText = formatINR(availableFunds);
+      document.getElementById('home-total-received').innerText = formatINR(totalReceived);
+      document.getElementById('home-total-expenses').innerText = formatINR(totalExpenses);
+
+      renderHomeMainContent(client);
+      renderExpenseAnalysis();
+      renderExpenseStageChips();
+      renderExpenses();
+      renderPayments();
+      renderExcelSheetsDropdown();
+      renderInfoCategoryChips();
+      renderParsedInfoSheet();
+    }
+
+    function renderEmptyState() {
+      document.getElementById('home-available-funds').innerText = '₹0';
+      document.getElementById('home-total-received').innerText = '₹0';
+      document.getElementById('home-total-expenses').innerText = '₹0';
+
+      const emptyHtml = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🏗️</div>
+          <div class="empty-state-title">No Projects Found</div>
+          <div class="empty-state-sub">Start tracking site construction financials by creating your first client project.</div>
+          <button class="btn-submit" onclick="openNewClientModal()">+ Add First Client</button>
+        </div>
+      `;
+      document.getElementById('home-main-content').innerHTML = emptyHtml;
+      document.getElementById('expenses-list').innerHTML = '<div style="text-align:center; padding:20px; color:#9ca3af; font-size:12px;">No active project selected.</div>';
+      document.getElementById('stages-list').innerHTML = '<div style="text-align:center; padding:20px; color:#9ca3af; font-size:12px;">No active project selected.</div>';
+    }
+
+    function renderHomeMainContent(client) {
+      const dueExpenses = client.expenses.filter(e => e.isDue);
+
+      const dueListHtml = dueExpenses.map(e => `
+        <div class="due-item">
+          <div>
+            <div class="due-name">${e.title}</div>
+            <div style="display:flex; gap:5px;">
+              <div class="due-date">${e.category}</div>
+              <div class="due-date">• ${e.date}</div>
+            </div>
+          </div>
+          <div class="due-amount">${formatINR(e.amount)}</div>
+        </div>
+      `).join('') || '<div style="font-size:12px; color:#9ca3af; margin-top:8px;">No pending due expenses</div>';
+
+      const projectCardHtml = `
+        <div class="card">
+          <div class="stage-header" onclick="toggleProjectDetailsCollapse()" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="stage-chevron">${isProjectDetailsCollapsed ? '►' : '▼'}</span>
+              <div style="font-weight:700; font-size:15px; color:#111827;">Project Details</div>
+            </div>
+            <span class="action-icon" onclick="event.stopPropagation(); openProjectModal();">✎</span>
+          </div>
+          <div class="stage-card-body" style="${isProjectDetailsCollapsed ? 'display: none;' : 'margin-top:10px;'}">
+            <div class="info-row"><span class="info-label">Client Name</span><span class="info-val">${client.name}</span></div>
+            <div class="info-row"><span class="info-label">Total Value</span><span class="info-val">${formatINR(client.totalAmount)}</span></div>
+            <div class="info-row"><span class="info-label">Notes</span><span class="info-val">${client.notes || 'None'}</span></div>
+            <div class="info-row"><span class="info-label">Reminders</span><span class="info-val">${client.reminders || 'None'}</span></div>
+          </div>
+        </div>
+
+        <div class="due-card card">
+          <div class="card-title" style="color: #ef4444; margin-bottom:0;">⚠️ Due Reminders</div>
+          <div id="home-due-list">${dueListHtml}</div>
+        </div>
+      `;
+
+      document.getElementById('home-main-content').innerHTML = projectCardHtml;
+    }
+
+    function toggleProjectDetailsCollapse() {
+      isProjectDetailsCollapsed = !isProjectDetailsCollapsed;
+      render();
+    }
+
+    // Expense Handlers
+    function switchAnalysisMode(mode) {
+      currentAnalysisMode = mode;
+      document.getElementById('btn-ana-cat').classList.toggle('active', mode === 'category');
+      document.getElementById('btn-ana-stage').classList.toggle('active', mode === 'stage');
+      renderExpenseAnalysis();
+    }
+
+    function renderExpenseAnalysis() {
+      const client = getActiveClient();
+      const container = document.getElementById('expense-analysis-list');
+      if (!container || !client) return;
+
+      const totals = {};
+      let overallTotal = 0;
+
+      client.expenses.forEach(e => {
+        const key = (currentAnalysisMode === 'category' ? e.category : e.stage) || 'General';
+        const amt = Number(e.amount) || 0;
+        totals[key] = (totals[key] || 0) + amt;
+        overallTotal += amt;
+      });
+
+      const sortedKeys = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+
+      if (sortedKeys.length === 0 || overallTotal === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:#9ca3af; text-align:center; padding:12px;">No expenses logged</div>';
+        return;
+      }
+
+      const colors = ['#6b46c1', '#10b981', '#3b82f6', '#ef4444', '#f59e0b', '#ec4899'];
+
+      container.innerHTML = sortedKeys.map((key, idx) => {
+        const amount = totals[key];
+        const pct = ((amount / overallTotal) * 100).toFixed(1);
+        const color = colors[idx % colors.length];
+
+        return `
+          <div class="analysis-item" onclick="filterExpensesByAnalysis('${key}')">
+            <div class="analysis-row-top">
+              <div class="analysis-label">
+                <span class="analysis-dot" style="background-color: ${color};"></span>
+                <span>${key}</span>
+              </div>
+              <div class="analysis-values">
+                <span class="analysis-amount">${formatINR(amount)}</span>
+                <span class="analysis-pct">${pct}%</span>
+              </div>
+            </div>
+            <div class="analysis-progress-bg">
+              <div class="analysis-progress-fill" style="width: ${pct}%; background-color: ${color};"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterExpensesByAnalysis(keyName) {
+      selectedExpenseStageFilter = keyName;
+      renderExpenseStageChips();
+      renderExpenses();
+    }
+
+    function renderExpenseStageChips() {
+      const client = getActiveClient();
+      if (!client) return;
+
+      const defaultCategories = ['All', 'Ply', 'Material', 'Labor', 'Hardware', 'Transport', 'Electrical', 'Fabrication'];
+      const stages = client.stages.map(s => s.name);
+      const combined = Array.from(new Set([...defaultCategories, ...stages]));
+
+      document.getElementById('expense-stage-chips').innerHTML = combined.map(s => `
+        <button class="chip ${selectedExpenseStageFilter === s ? 'active' : ''}" onclick="filterExpenseByStage('${s}')">${s}</button>
+      `).join('');
+    }
+
+    function filterExpenseByStage(stage) {
+      selectedExpenseStageFilter = stage;
+      renderExpenseStageChips();
+      renderExpenses();
+    }
+
+    function renderExpenses() {
+      const client = getActiveClient();
+      const query = (document.getElementById('expense-search')?.value || '').toLowerCase();
+      const container = document.getElementById('expenses-list');
+      if (!container || !client) return;
+
+      const filtered = client.expenses.filter(e => {
+        const matchesSearch = e.title.toLowerCase().includes(query) || (e.notes && e.notes.toLowerCase().includes(query));
+        const matchesFilter = selectedExpenseStageFilter === 'All' || e.category === selectedExpenseStageFilter || e.stage === selectedExpenseStageFilter;
+        return matchesSearch && matchesFilter;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:#9ca3af; text-align:center; padding:20px;">No expenses recorded</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(e => `
+        <div class="swipe-container">
+          <div class="swipe-action swipe-action-edit">✎ Edit</div>
+          <div class="swipe-action swipe-action-delete">🗑 Delete</div>
+          <div class="expense-card swipe-content ${expandedExpenses[e.id] ? 'expanded' : ''}" id="exp-item-${e.id}" onclick="toggleExpenseExpand('${e.id}', event)">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; gap:4px; align-items:center;">
+                <span class="expense-cat-badge">${e.category}</span>
+                ${e.stage ? `<span style="font-size:10px; background:#f3e8ff; color:#6b46c1; padding:2px 6px; border-radius:10px; font-weight:600;">${e.stage}</span>` : ''}
+              </div>
+              <button class="status-toggle-btn ${e.isDue ? 'due' : 'paid'}" onclick="toggleExpenseDueStatus('${e.id}', event)">
+                ${e.isDue ? '● DUE' : '✓ PAID'}
+              </button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+              <div style="font-size:14px; font-weight:700;">${e.title}</div>
+              <div style="font-size:15px; font-weight:800; color:#ef4444;">-${formatINR(e.amount)}</div>
+            </div>
+            <div class="expense-expandable-notes">
+              <div><strong>Date:</strong> ${e.date || 'N/A'}</div>
+              <div><strong>Mode:</strong> ${e.mode || 'N/A'}</div>
+              <div><strong>Notes:</strong> ${e.notes || 'None'}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      filtered.forEach(e => {
+        const elem = document.getElementById(`exp-item-${e.id}`);
+        if (elem) attachSwipeListeners(elem, () => openExpenseModal(e.id), () => deleteExpense(e.id));
+      });
+    }
+
+    function toggleExpenseExpand(id, e) {
+      if (e.target.closest('.status-toggle-btn')) return;
+      expandedExpenses[id] = !expandedExpenses[id];
+      renderExpenses();
+    }
+
+    function toggleExpenseDueStatus(id, e) {
+      e.stopPropagation();
+      const client = getActiveClient();
+      const exp = client.expenses.find(x => x.id === id);
+      if (exp) {
+        exp.isDue = !exp.isDue;
+        saveData();
+      }
+    }
+
+    // Payment Handlers
+    function renderPayments() {
+      const client = getActiveClient();
+      if (!client) return;
+
+      const totalProjectVal = client.stages.reduce((sum, s) => sum + Number(s.amount), 0) || client.totalAmount;
+      const totalPaid = client.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalBalance = totalProjectVal - totalPaid;
+      const progress = totalProjectVal > 0 ? (totalPaid / totalProjectVal) * 100 : 0;
+
+      document.getElementById('pay-total-val').innerText = formatINR(totalProjectVal);
+      document.getElementById('pay-total-paid').innerText = `Paid: ${formatINR(totalPaid)}`;
+      document.getElementById('pay-total-balance').innerText = `Balance: ${formatINR(totalBalance)}`;
+      document.getElementById('pay-total-progress').style.width = `${Math.min(progress, 100)}%`;
+
+      document.getElementById('stages-list').innerHTML = client.stages.map((stage, index) => {
+        const stagePayments = client.payments.filter(p => p.stageId === stage.id);
+        const stagePaid = stagePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const stageBal = stage.amount - stagePaid;
+        const stageProg = stage.amount > 0 ? Math.min((stagePaid / stage.amount) * 100, 100) : 0;
+        const isCollapsed = collapsedStages[stage.id];
+
+        return `
+          <div class="stage-card ${isCollapsed ? 'collapsed' : ''}">
+            <div class="stage-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="stage-chevron" onclick="toggleStageCollapse('${stage.id}')">${isCollapsed ? '►' : '▼'}</span>
+                <div class="stage-num">${String(index + 1).padStart(2, '0')}</div>
+                <div class="stage-title">${stage.name}</div>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <span class="action-icon" onclick="openEditStageModal('${stage.id}')">✎</span>
+                <span style="font-weight:800;">${formatINR(stage.amount)}</span>
+              </div>
+            </div>
+            
+            <div class="stage-card-body" style="${isCollapsed ? 'display: none;' : ''}">
+              <div class="progress-bar"><div class="progress-fill" style="width: ${stageProg}%;"></div></div>
+              <div class="stage-sub">
+                <span>Paid: ${formatINR(stagePaid)}</span>
+                <span style="color:${stageBal > 0 ? '#ef4444' : '#10b981'};">${stageBal > 0 ? 'Bal: ' + formatINR(stageBal) : '✓ Paid'}</span>
+              </div>
+
+              <div style="margin-top:8px;" id="stage-pay-list-${stage.id}"></div>
+
+              <div class="quick-pay-container">
+                <input type="number" id="quick-pay-amt-${stage.id}" class="quick-pay-input" placeholder="Amount (₹)">
+                <button class="quick-pay-btn" onclick="submitQuickPayment('${stage.id}')">+ Pay</button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      client.stages.forEach(stage => {
+        const stagePayments = client.payments.filter(p => p.stageId === stage.id);
+        const payListElem = document.getElementById(`stage-pay-list-${stage.id}`);
+        if (!payListElem) return;
+
+        payListElem.innerHTML = stagePayments.map(p => `
+          <div class="swipe-container">
+            <div class="swipe-action swipe-action-delete">🗑 Delete</div>
+            <div id="pay-item-${p.id}" class="swipe-content" style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-top:1px dashed #f3f4f6;">
+              <span>📅 ${p.date} (${p.mode})</span>
+              <span style="font-weight:700; color:#10b981;">${formatINR(p.amount)}</span>
+            </div>
+          </div>
+        `).join('');
+
+        stagePayments.forEach(p => {
+          const elem = document.getElementById(`pay-item-${p.id}`);
+          if (elem) attachSwipeListeners(elem, null, () => deletePayment(p.id));
+        });
+      });
+    }
+
+    function toggleStageCollapse(stageId) {
+      collapsedStages[stageId] = !collapsedStages[stageId];
+      renderPayments();
+    }
+
+    function submitQuickPayment(stageId) {
+      const inputElem = document.getElementById(`quick-pay-amt-${stageId}`);
+      const amount = parseFloat(inputElem.value);
+      if (!amount || amount <= 0) return alert('Enter valid amount');
+
+      const client = getActiveClient();
+      client.payments.unshift({
+        id: 'p_' + Date.now(),
+        stageId: stageId,
+        amount: amount,
+        mode: 'UPI',
+        date: new Date().toISOString().split('T')[0]
+      });
+      saveData();
+    }
+
+    // Info Tab
+    function handleExcelUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const jsonSheetData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+
+        const client = getActiveClient();
+        if (!client.sheets) client.sheets = [];
+        
+        const newSheet = { id: 'sheet_' + Date.now(), fileName: file.name, uploadedAt: new Date().toLocaleDateString(), data: jsonSheetData };
+        client.sheets.unshift(newSheet);
+        selectedSheetId = newSheet.id;
+        saveData();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderExcelSheetsDropdown() {
+      const client = getActiveClient();
+      const selector = document.getElementById('excel-sheet-selector');
+      if (!selector || !client) return;
+
+      const sheets = client.sheets || [];
+      selector.innerHTML = '<option value="">-- Select Saved Sheet --</option>' + 
+        sheets.map(s => `<option value="${s.id}" ${s.id === selectedSheetId ? 'selected' : ''}>${s.fileName} (${s.uploadedAt})</option>`).join('');
+    }
+
+    function onExcelSheetChange(id) {
+      selectedSheetId = id;
+      renderParsedInfoSheet();
+    }
+
+    function renderInfoCategoryChips() {
+      const categories = ['All', 'Kitchen', 'Bedroom', 'Fabrication', 'Loose Furniture'];
+      document.getElementById('info-filter-chips').innerHTML = categories.map(cat => `
+        <button class="chip ${selectedInfoCategoryFilter === cat ? 'active' : ''}" onclick="filterInfoByCategory('${cat}')">${cat}</button>
+      `).join('');
+    }
+
+    function filterInfoByCategory(cat) {
+      selectedInfoCategoryFilter = cat;
+      renderInfoCategoryChips();
+      renderParsedInfoSheet();
+    }
+
+    function renderParsedInfoSheet() {
+      const client = getActiveClient();
+      const container = document.getElementById('info-sheet-container');
+      if (!client || !container) return;
+
+      const sheetRecord = (client.sheets || []).find(s => s.id === selectedSheetId);
+      if (!sheetRecord) {
+        container.innerHTML = '<div style="font-size:12px; color:#9ca3af; text-align:center; padding:20px;">No Excel sheets uploaded.</div>';
+        return;
+      }
+
+      container.innerHTML = `<div class="headline-block"><div class="headline-title">${sheetRecord.fileName}</div><div style="padding:12px; font-size:12px; color:#4b5563;">Parsed ${sheetRecord.data.length} rows from document.</div></div>`;
+    }
+
+    // Modal Operations
+    function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+    function openModal(contentHtml) {
+      document.getElementById('modal-content').innerHTML = contentHtml;
+      document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function openNewClientModal() {
+      const html = `
+        <div class="modal-header">
+          <span>Add New Client Project</span>
+          <span style="cursor:pointer" onclick="closeModal()">✕</span>
+        </div>
+        <form onsubmit="saveNewClient(event)">
+          <div class="form-group">
+            <label class="form-label">Client / Project Name</label>
+            <input type="text" id="nc-name" class="form-control" required placeholder="e.g. Modern Villa Project">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Total Contract Value (₹)</label>
+            <input type="number" id="nc-amount" class="form-control" required placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <input type="text" id="nc-notes" class="form-control" placeholder="Key scope and details...">
+          </div>
+          <button type="submit" class="btn-submit">Create Project</button>
+        </form>
+      `;
+      openModal(html);
+    }
+
+    function saveNewClient(e) {
+      e.preventDefault();
+      const newId = 'c_' + Date.now();
+      const newClient = {
+        id: newId,
+        name: document.getElementById('nc-name').value,
+        totalAmount: Number(document.getElementById('nc-amount').value),
+        notes: document.getElementById('nc-notes').value,
+        reminders: '',
+        stages: defaultStageTemplates.map(s => ({ ...s, id: s.id + '_' + Date.now() })),
+        expenses: [],
+        payments: [],
+        sheets: []
+      };
+
+      db.clients.push(newClient);
+      db.activeClientId = newId;
+      closeModal();
+      saveData();
+    }
+
+    function openExpenseModal(editId = null) {
+      const client = getActiveClient();
+      if (!client) return alert('Please create or select a client project first.');
+
+      const exp = editId ? client.expenses.find(e => e.id === editId) : {
+        title: '', amount: '', category: 'Material', stage: client.stages[0]?.name || 'Advance', mode: 'UPI', isDue: false, notes: '', date: new Date().toISOString().split('T')[0]
+      };
+
+      const html = `
+        <div class="modal-header">
+          <span>${editId ? 'Edit Expense' : 'Add Expense'}</span>
+          <span style="cursor:pointer" onclick="closeModal()">✕</span>
+        </div>
+        <form onsubmit="saveExpense(event, '${editId || ''}')">
+          <div class="form-group">
+            <label class="form-label">Vendor / Description</label>
+            <input type="text" id="exp-title" class="form-control" value="${exp.title}" required placeholder="Vendor name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" id="exp-amount" class="form-control" value="${exp.amount}" required placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="exp-category" class="form-control">
+              <option ${exp.category==='Material'?'selected':''}>Material</option>
+              <option ${exp.category==='Labor'?'selected':''}>Labor</option>
+              <option ${exp.category==='Ply'?'selected':''}>Ply</option>
+              <option ${exp.category==='Hardware'?'selected':''}>Hardware</option>
+              <option ${exp.category==='Transport'?'selected':''}>Transport</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Mode</label>
+            <select id="exp-mode" class="form-control">
+              <option ${exp.mode==='UPI'?'selected':''}>UPI</option>
+              <option ${exp.mode==='Bank Transfer'?'selected':''}>Bank Transfer</option>
+              <option ${exp.mode==='Cash'?'selected':''}>Cash</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" id="exp-date" class="form-control" value="${exp.date}">
+          </div>
+          <div class="form-group">
+            <label style="font-size:12px; font-weight:600;"><input type="checkbox" id="exp-due" ${exp.isDue ? 'checked' : ''}> Mark as Pending Due</label>
+          </div>
+          <button type="submit" class="btn-submit">Save Expense</button>
+        </form>
+      `;
+      openModal(html);
+    }
+
+    function saveExpense(e, editId) {
+      e.preventDefault();
+      const client = getActiveClient();
+      const expData = {
+        id: editId || 'e_' + Date.now(),
+        title: document.getElementById('exp-title').value,
+        amount: Number(document.getElementById('exp-amount').value),
+        category: document.getElementById('exp-category').value,
+        stage: client.stages[0]?.name || 'General',
+        mode: document.getElementById('exp-mode').value,
+        date: document.getElementById('exp-date').value,
+        isDue: document.getElementById('exp-due').checked,
+        notes: ''
+      };
+
+      if (editId) {
+        const idx = client.expenses.findIndex(x => x.id === editId);
+        client.expenses[idx] = expData;
+      } else {
+        client.expenses.unshift(expData);
+      }
+      closeModal();
+      saveData();
+    }
+
+    function deleteExpense(id) {
+      const client = getActiveClient();
+      if (client && confirm('Delete this expense?')) {
+        client.expenses = client.expenses.filter(e => e.id !== id);
+        saveData();
+      }
+    }
+
+    function deletePayment(id) {
+      const client = getActiveClient();
+      if (client && confirm('Delete payment entry?')) {
+        client.payments = client.payments.filter(p => p.id !== id);
+        saveData();
+      }
+    }
+
+    function openEditStageModal(stageId) {
+      const client = getActiveClient();
+      const stage = client.stages.find(s => s.id === stageId);
+      const html = `
+        <div class="modal-header">
+          <span>Edit Stage Value</span>
+          <span style="cursor:pointer" onclick="closeModal()">✕</span>
+        </div>
+        <form onsubmit="saveStageAmount(event, '${stageId}')">
+          <div class="form-group">
+            <label class="form-label">Stage Name</label>
+            <input type="text" class="form-control" value="${stage.name}" disabled>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" id="stage-amt" class="form-control" value="${stage.amount}" required>
+          </div>
+          <button type="submit" class="btn-submit">Save Stage</button>
+        </form>
+      `;
+      openModal(html);
+    }
+
+    function saveStageAmount(e, stageId) {
+      e.preventDefault();
+      const client = getActiveClient();
+      const stage = client.stages.find(s => s.id === stageId);
+      stage.amount = Number(document.getElementById('stage-amt').value);
+      closeModal();
+      saveData();
+    }
+
+    function openNewStageModal() {
+      const html = `
+        <div class="modal-header">
+          <span>Add Stage</span>
+          <span style="cursor:pointer" onclick="closeModal()">✕</span>
+        </div>
+        <form onsubmit="saveNewStage(event)">
+          <div class="form-group">
+            <label class="form-label">Stage Name</label>
+            <input type="text" id="new-stage-name" class="form-control" required placeholder="e.g. Flooring">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Amount (₹)</label>
+            <input type="number" id="new-stage-amt" class="form-control" required placeholder="0.00">
+          </div>
+          <button type="submit" class="btn-submit">Add Stage</button>
+        </form>
+      `;
+      openModal(html);
+    }
+
+    function saveNewStage(e) {
+      e.preventDefault();
+      const client = getActiveClient();
+      if (!client) return alert('Select or create a client project first.');
+      client.stages.push({
+        id: 's_' + Date.now(),
+        name: document.getElementById('new-stage-name').value,
+        amount: Number(document.getElementById('new-stage-amt').value)
+      });
+      closeModal();
+      saveData();
+    }
+
+    function openProjectModal() {
+      const client = getActiveClient();
+      if (!client) return;
+      const html = `
+        <div class="modal-header">
+          <span>Edit Project Info</span>
+          <span style="cursor:pointer" onclick="closeModal()">✕</span>
+        </div>
+        <form onsubmit="saveProjectDetails(event)">
+          <div class="form-group">
+            <label class="form-label">Client Name</label>
+            <input type="text" id="proj-name" class="form-control" value="${client.name}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Project Value (₹)</label>
+            <input type="number" id="proj-total" class="form-control" value="${client.totalAmount}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <input type="text" id="proj-notes" class="form-control" value="${client.notes || ''}">
+          </div>
+          <button type="submit" class="btn-submit">Save Changes</button>
+        </form>
+      `;
+      openModal(html);
+    }
+
+    function saveProjectDetails(e) {
+      e.preventDefault();
+      const client = getActiveClient();
+      client.name = document.getElementById('proj-name').value;
+      client.totalAmount = Number(document.getElementById('proj-total').value);
+      client.notes = document.getElementById('proj-notes').value;
+      closeModal();
+      saveData();
+    }
+
+    // Swipe Helper
+    function attachSwipeListeners(element, onEdit, onDelete) {
+      let touchStartX = 0, deltaX = 0;
+      element.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; element.style.transition = 'none'; }, { passive: true });
+      element.addEventListener('touchmove', e => {
+        deltaX = e.touches[0].clientX - touchStartX;
+        if (Math.abs(deltaX) < 120) element.style.transform = `translateX(${deltaX}px)`;
+      }, { passive: true });
+      element.addEventListener('touchend', () => {
+        element.style.transition = 'transform 0.2s ease';
+        if (deltaX > 70 && onEdit) onEdit();
+        else if (deltaX < -70 && onDelete) onDelete();
+        element.style.transform = 'translateX(0)';
+        touchStartX = 0; deltaX = 0;
+      });
+    }
+
+    // Register Service Worker for PWA Mobile Installation
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Registration failed: ', err));
+      });
+    }
+
+    // Initial Load
+    render();
+  </script>
+</body>
+</html>
