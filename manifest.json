@@ -1,6 +1,7 @@
 {
-  "name": "LuxBuild Construction Tracker",
+  "name": "LuxBuild - Construction Tracker",
   "short_name": "LuxBuild",
+  "description": "Track client expenses, stage payments, and construction sheets.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f5f9",
@@ -10,12 +11,14 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1033/1033090.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1033/1033090.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
