@@ -476,7 +476,7 @@
         document.getElementById('home-total-received').innerText = formatINR(0);
         document.getElementById('home-total-expenses').innerText = formatINR(0);
         document.getElementById('csv-btn').style.display='none';
-        document.getElementById('save-sheet').style.display='none';
+        //document.getElementById('save-sheet').style.display='none';
         
         const emptyStateHTML = `
           <div class="card" style="text-align:center; padding: 40px 20px;">
@@ -1109,9 +1109,9 @@
                     <div class="item-desc">${item.info}</div>
                   </td>
                   <td style="width: 110px; text-align: right;">
-                    ${item.total ? `<div style="font-weight:700; color:#111827;">${item.total}</div>` : ''}
+                    ${item.rate ? `Rate: ${item.rate}` : ''}
                     <div class="item-metrics">
-                      ${item.qty ? `Qty: ${item.qty}` : ''} ${item.rate ? `| ${item.rate}` : ''}
+                      <div style="font-weight:700; color:#111827;">${formatINR(item.total)}</div>
                     </div>
                   </td>
                 </tr>
