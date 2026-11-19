@@ -141,7 +141,6 @@
       </div>
 
       <div class="flex items-center gap-1.5 shrink-0">
-        <!-- Chrome PWA Install Button (Appears automatically when installable) -->
         <button id="btn-install-pwa" onclick="triggerPWAInstall()" title="Install LuxBuild App"
           class="hidden px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-[11px] flex items-center gap-1 shadow-sm shadow-emerald-600/25 transition cursor-pointer">
           <span>📲</span><span>Install</span>
@@ -160,7 +159,7 @@
       </div>
     </header>
 
-    <!-- Chrome PWA Install Banner (Shown when browser triggers beforeinstallprompt) -->
+    <!-- Chrome PWA Install Banner -->
     <div id="pwa-install-banner" class="hidden mx-4 mt-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl p-3.5 shadow-lg shadow-indigo-600/20 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-lg shrink-0">📲</div>
@@ -184,13 +183,13 @@
       <div id="home-empty-state" class="hidden bg-white rounded-3xl p-8 text-center border border-slate-200/80 shadow-sm">
         <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl">🏗️</div>
         <h2 class="font-display font-bold text-lg text-slate-900">No Active Projects</h2>
-        <p class="text-xs text-slate-500 mt-1 mb-5 leading-relaxed">Create your first client project to manage stage milestones, site expenses, and BOQ sheets.</p>
+        <p class="text-xs text-slate-500 mt-1 mb-5 leading-relaxed">Create a client project or sync from your connected Google Sheet to get started.</p>
         <div class="flex flex-col sm:flex-row gap-2.5 justify-center">
           <button onclick="openNewClientModal()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition cursor-pointer">
             + Create New Client
           </button>
-          <button onclick="loadDemoClient()" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer">
-            ✨ Load Demo Project
+          <button onclick="syncFromGoogleSheetOnBoot()" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer">
+            🔄 Pull From Sheet
           </button>
         </div>
       </div>
@@ -441,118 +440,16 @@
     }
 
     // =========================================================================
-    // 2. DATA STORE & DEMO SEED
+    // 2. DATA STORE (NO HARDCODED DEMO DATA)
     // =========================================================================
     const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxCBFgbrRtV3bG0YAATtRD0QYMUlHVAycJhnyNL5NSYXePvtTcfLrFv5OfXpTvvhk1glg/exec";
 
     const defaultStages = [
-      { id: "1", name: "Advance", amount: 500000 },
-      { id: "2", name: "Material Procurement", amount: 850000 },
-      { id: "3", name: "Shutters and Hardware", amount: 650000 },
-      { id: "4", name: "Final Handover", amount: 400000 }
+      { id: "1", name: "Advance", amount: 50000 },
+      { id: "2", name: "Material Procurement", amount: 0 },
+      { id: "3", name: "Shutters and Hardware", amount: 0 },
+      { id: "4", name: "Final Handover", amount: 0 }
     ];
-
-    function createDemoClient() {
-      const today = new Date().toISOString().split('T')[0];
-      const d1 = new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0];
-      const d2 = new Date(Date.now() - 86400000 * 6).toISOString().split('T')[0];
-      const d3 = new Date(Date.now() - 86400000 * 12).toISOString().split('T')[0];
-
-      return {
-        id: "client_demo_1",
-        name: "Aarav Sharma — Villa 42 Interiors",
-        totalAmount: 2400000,
-        lastPayment: "₹4,50,000 (2 days ago)",
-        notes: "3BHK Turnkey Interior + Modular Kitchen & Wardrobes (Whitefield, Bengaluru)",
-        reminders: "Finalize Veneer polish shade & Hettich tandem box delivery by Friday",
-        stages: [
-          { id: "1", name: "Advance", amount: 500000 },
-          { id: "2", name: "Material Procurement", amount: 850000 },
-          { id: "3", name: "Shutters and Hardware", amount: 650000 },
-          { id: "4", name: "Final Handover", amount: 400000 }
-        ],
-        payments: [
-          { id: "p_102", stageId: "2", amount: 450000, mode: "Bank Transfer", date: d1 },
-          { id: "p_101", stageId: "1", amount: 500000, mode: "UPI", date: d3 }
-        ],
-        expenses: [
-          {
-            id: "e_201",
-            title: "Century Sainik 710 BWP Plywood (45 Sheets)",
-            amount: 168500,
-            category: "Ply",
-            stage: "Material Procurement",
-            mode: "Bank Transfer",
-            date: d1,
-            isDue: false,
-            notes: "18mm & 12mm calibrated marine ply delivered to site"
-          },
-          {
-            id: "e_202",
-            title: "Hettich Soft-Close Hinges & Tandem Channels",
-            amount: 74200,
-            category: "Hardware",
-            stage: "Material Procurement",
-            mode: "UPI",
-            date: today,
-            isDue: true,
-            notes: "Balance invoice payable upon kitchen carcass inspection"
-          },
-          {
-            id: "e_203",
-            title: "Merino Matt Laminates & Edge Banding",
-            amount: 62000,
-            category: "Laminate",
-            stage: "Material Procurement",
-            mode: "UPI",
-            date: d2,
-            isDue: false,
-            notes: "Fluted charcoal + warm oak suede finish laminates"
-          },
-          {
-            id: "e_204",
-            title: "False Ceiling Gypsum & Cove Profile Work",
-            amount: 48500,
-            category: "POP",
-            stage: "Advance",
-            mode: "Cash",
-            date: d2,
-            isDue: true,
-            notes: "Living + Master bedroom ceiling framing & boarding"
-          },
-          {
-            id: "e_205",
-            title: "Carpentry Team — Milestone 1 Labor",
-            amount: 95000,
-            category: "Labor",
-            stage: "Material Procurement",
-            mode: "Bank Transfer",
-            date: d3,
-            isDue: false,
-            notes: "Weekly contractor payout for 6 carpenters"
-          }
-        ],
-        sheets: [
-          {
-            id: "sheet_demo_1",
-            fileName: "Villa42_Master_BOQ_Specs.xlsx",
-            uploadedAt: d2,
-            data: [
-              ["Modular Kitchen"],
-              ["Island Base & Tall Units", "145", "1850", "268250", "BWP Marine Ply carcass with PU matte shutters & Hettich Quadro channels"],
-              ["Quartz Countertop & Dado", "68", "650", "44200", "20mm KalingaStone Bianco Quartz with 45-degree chamfered edge"],
-              ["Master Bedroom"],
-              ["Walk-in Sliding Wardrobe", "112", "1950", "218400", "Hettich TopLine XL sliding system with fluted bronze glass & internal LED"],
-              ["King Upholstered Bed & Side Tables", "1", "85000", "85000", "Teak wood frame with boucle fabric headboard & brass inlay"],
-              ["Loose Furniture"],
-              ["6-Seater Dining Table & Chairs", "1", "115000", "115000", "Solid Ashwood base with Italian porcelain top"],
-              ["Fabrication"],
-              ["Balcony Pergola & MS Railing", "85", "780", "66300", "16-gauge powder coated MS box section with toughened glass"]
-            ]
-          }
-        ]
-      };
-    }
 
     let db = null;
     try {
@@ -561,8 +458,7 @@
     } catch (e) {}
 
     if (!db || !Array.isArray(db.clients)) {
-      const demo = createDemoClient();
-      db = { activeClientId: demo.id, clients: [demo] };
+      db = { activeClientId: null, clients: [] };
       localStorage.setItem('luxbuild_pwa_db', JSON.stringify(db));
     }
 
@@ -602,16 +498,6 @@
       try { localStorage.setItem('luxbuild_pwa_db', JSON.stringify(db)); } catch (e) {}
       render();
       if (triggerSync) syncToGoogleSheet();
-    }
-
-    function loadDemoClient() {
-      const demo = createDemoClient();
-      demo.id = 'client_demo_' + Date.now();
-      db.clients.push(demo);
-      db.activeClientId = demo.id;
-      selectedSheetId = demo.sheets[0]?.id || '';
-      saveData(false);
-      showToast('Demo project loaded!', '✨');
     }
 
     function switchTab(tab) {
@@ -665,8 +551,8 @@
       emptyState?.classList.add('hidden');
       activeContent?.classList.remove('hidden');
 
-      const totalReceived = client.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-      const totalExpenses = client.expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const totalReceived = (client.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      const totalExpenses = (client.expenses || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
       const availableFunds = totalReceived - totalExpenses;
 
       document.getElementById('home-available-funds').innerText = formatINR(availableFunds);
@@ -708,14 +594,14 @@
       }
 
       let activeIdx = client.stages.findIndex(stage => {
-        const paid = client.payments.filter(p => p.stageId === stage.id).reduce((s, p) => s + Number(p.amount), 0);
+        const paid = (client.payments || []).filter(p => p.stageId === stage.id).reduce((s, p) => s + Number(p.amount), 0);
         return paid < stage.amount;
       });
       if (activeIdx === -1) activeIdx = client.stages.length - 1;
 
       const currentStage = client.stages[activeIdx];
       const nextStage = client.stages[activeIdx + 1];
-      const currentPaid = client.payments.filter(p => p.stageId === currentStage.id).reduce((s, p) => s + Number(p.amount), 0);
+      const currentPaid = (client.payments || []).filter(p => p.stageId === currentStage.id).reduce((s, p) => s + Number(p.amount), 0);
       const currentBalance = Math.max(0, currentStage.amount - currentPaid);
       const pct = currentStage.amount > 0 ? Math.min(100, Math.round((currentPaid / currentStage.amount) * 100)) : 100;
 
@@ -779,7 +665,7 @@
       const countEl = document.getElementById('home-due-count');
       if (!client || !listEl) return;
 
-      const dueItems = client.expenses.filter(e => e.isDue);
+      const dueItems = (client.expenses || []).filter(e => e.isDue);
       if (countEl) countEl.innerText = `${dueItems.length} Due`;
 
       if (dueItems.length === 0) {
@@ -823,7 +709,7 @@
       const client = getActiveClient();
       const container = document.getElementById('home-project-details-card');
       if (!client || !container) return;
-      const totalStageVal = client.stages.reduce((s, x) => s + Number(x.amount || 0), 0);
+      const totalStageVal = (client.stages || []).reduce((s, x) => s + Number(x.amount || 0), 0);
 
       container.innerHTML = `
         <div class="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs">
@@ -876,7 +762,7 @@
       const totals = {};
       let overall = 0;
 
-      client.expenses.forEach(e => {
+      (client.expenses || []).forEach(e => {
         const key = (currentAnalysisMode === 'category' ? e.category : e.stage) || 'Other';
         const amt = Number(e.amount || 0);
         totals[key] = (totals[key] || 0) + amt;
@@ -950,7 +836,7 @@
       const container = document.getElementById('expense-stage-chips');
       if (!container || !client) return;
       const baseCats = ['All', 'Ply', 'Laminate', 'Material', 'Labor', 'Hardware', 'POP', 'Electrical', 'Transport', 'Loose Furniture', 'Fabrication', 'Curtains', 'Profit'];
-      const allChips = Array.from(new Set([...baseCats, ...client.stages.map(s => s.name)]));
+      const allChips = Array.from(new Set([...baseCats, ...(client.stages || []).map(s => s.name)]));
       container.innerHTML = allChips.map(chip => {
         const active = selectedExpenseStageFilter === chip;
         return `<button onclick="filterExpenseByChip('${chip}')" class="px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${active ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}">${chip}</button>`;
@@ -988,7 +874,7 @@
       if (!client || !container) return;
 
       const query = (document.getElementById('expense-search')?.value || '').toLowerCase().trim();
-      const filtered = client.expenses.filter(e => {
+      const filtered = (client.expenses || []).filter(e => {
         const matchesQuery = !query || e.title.toLowerCase().includes(query) || (e.notes && e.notes.toLowerCase().includes(query)) || (e.category && e.category.toLowerCase().includes(query)) || (e.stage && e.stage.toLowerCase().includes(query)) || (e.date && e.date.includes(query));
         const matchesChip = selectedExpenseStageFilter === 'All' || e.category === selectedExpenseStageFilter || e.stage === selectedExpenseStageFilter;
         const matchesStatus = selectedExpenseStatusFilter === 'all' || (selectedExpenseStatusFilter === 'due' && e.isDue) || (selectedExpenseStatusFilter === 'paid' && !e.isDue);
@@ -1073,8 +959,8 @@
       const container = document.getElementById('stages-list');
       if (!client || !container) return;
 
-      const totalVal = client.stages.reduce((s, x) => s + Number(x.amount || 0), 0);
-      const totalPaid = client.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+      const totalVal = (client.stages || []).reduce((s, x) => s + Number(x.amount || 0), 0);
+      const totalPaid = (client.payments || []).reduce((s, p) => s + Number(p.amount || 0), 0);
       const totalBal = totalVal - totalPaid;
       const pct = totalVal > 0 ? Math.min(100, Math.round((totalPaid / totalVal) * 100)) : 0;
 
@@ -1084,8 +970,8 @@
       document.getElementById('pay-collection-pct').innerText = `${pct}% Collected`;
       document.getElementById('pay-total-progress').style.width = `${pct}%`;
 
-      container.innerHTML = client.stages.map((stage, idx) => {
-        const stagePays = client.payments.filter(p => p.stageId === stage.id);
+      container.innerHTML = (client.stages || []).map((stage, idx) => {
+        const stagePays = (client.payments || []).filter(p => p.stageId === stage.id);
         const stagePaid = stagePays.reduce((s, p) => s + Number(p.amount || 0), 0);
         const stageBal = stage.amount - stagePaid;
         const stagePct = stage.amount > 0 ? Math.min(100, Math.round((stagePaid / stage.amount) * 100)) : 0;
@@ -1136,10 +1022,10 @@
         `;
       }).join('');
 
-      client.stages.forEach(stage => {
+      (client.stages || []).forEach(stage => {
         const listEl = document.getElementById(`stage-pay-list-${stage.id}`);
         if (!listEl) return;
-        const stagePays = client.payments.filter(p => p.stageId === stage.id);
+        const stagePays = (client.payments || []).filter(p => p.stageId === stage.id);
         if (stagePays.length === 0) {
           listEl.innerHTML = `<div class="text-[11px] text-slate-400 italic py-1">No receipts logged for this stage yet.</div>`;
           return;
@@ -1264,7 +1150,7 @@
       const merged = Array.from(new Set(['All', 'Kitchen', 'Bedroom', 'Fabrication', 'Loose Furniture', ...dynamicHeadlines]));
       container.innerHTML = merged.map(cat => {
         const active = selectedInfoCategoryFilter === cat;
-        return `<button onclick="filterInfoByCategory('${cat.replace(/'/g, "\'")}')" class="px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${active ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}">${cat}</button>`;
+        return `<button onclick="filterInfoByCategory('${cat.replace(/'/g, "\\'")}')" class="px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${active ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}">${cat}</button>`;
       }).join('');
     }
 
@@ -1338,7 +1224,7 @@
           <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold cursor-pointer">✕</button>
         </div>
         <form onsubmit="saveNewClient(event)" class="space-y-3">
-          <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Client / Project Name</label><input type="text" id="nc-name" required placeholder="e.g. Neha Kapoor — Penthouse 12" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
+          <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Client / Project Name</label><input type="text" id="nc-name" required placeholder="Client or site name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
           <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Total Project Value (₹)</label><input type="number" id="nc-amount" required placeholder="e.g. 2400000" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
           <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Project Notes</label><input type="text" id="nc-notes" placeholder="Scope, location..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
           <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Key Reminder</label><input type="text" id="nc-reminder" placeholder="Site handover date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
@@ -1669,7 +1555,7 @@
       db.activeClientId = db.clients[0]?.id || null;
       selectedSheetId = db.clients[0]?.sheets?.[0]?.id || '';
       closeModal();
-      saveData(false);
+      saveData(true);
       showToast(`Removed "${deletedName}"`, '🗑');
     }
 
@@ -1707,19 +1593,6 @@
       event.target.value = '';
     }
 
-    // Fix: Ensure deleting a client also updates Google Sheets
-    function executeDeleteClient() {
-      const idx = db.clients.findIndex(c => c.id === db.activeClientId);
-      if (idx === -1) return;
-      const deletedName = db.clients[idx].name;
-      db.clients.splice(idx, 1);
-      db.activeClientId = db.clients[0]?.id || null;
-      selectedSheetId = db.clients[0]?.sheets?.[0]?.id || '';
-      closeModal();
-      saveData(true); // <-- Changed from false to true so Sheet stays in sync
-      showToast(`Removed "${deletedName}"`, '🗑');
-    }
-
     async function syncToGoogleSheet(isManual = false) {
       if (!db || !Array.isArray(db.clients)) return;
       const syncIcon = document.getElementById('sync-icon');
@@ -1729,7 +1602,6 @@
       if (statusTxt) statusTxt.innerText = 'Syncing...';
 
       try {
-        // Send ALL clients (excluding heavy base64/parsed Excel sheets) so no client is ever overwritten
         const clientsPayload = db.clients.map(c => ({
           id: c.id,
           name: c.name,
@@ -1785,23 +1657,21 @@
 
         if (data.status === 'success' && Array.isArray(data.clients)) {
           if (data.clients.length > 0) {
-            // Preserve locally uploaded BOQ Excel sheets per client
             const existingById = {};
             const existingByName = {};
             (db.clients || []).forEach(c => {
               existingById[c.id] = c;
-              existingByName[c.name.toLowerCase()] = c;
+              existingByName[c.name.trim().toLowerCase()] = c;
             });
 
             db.clients = data.clients.map(remoteClient => {
-              const localMatch = existingById[remoteClient.id] || existingByName[remoteClient.name.toLowerCase()];
+              const localMatch = existingById[remoteClient.id] || existingByName[remoteClient.name.trim().toLowerCase()];
               return {
                 ...remoteClient,
                 sheets: localMatch?.sheets || []
               };
             });
 
-            // Keep active client if it still exists, otherwise default to first client
             if (!db.clients.some(c => c.id === db.activeClientId)) {
               db.activeClientId = db.clients[0].id;
             }
@@ -1830,7 +1700,6 @@
       syncToGoogleSheet(true);
     }
 
-    // Initial render from local cache immediately, then pull latest from Google Sheet
     render();
     window.addEventListener('DOMContentLoaded', syncFromGoogleSheetOnBoot);
   </script>
