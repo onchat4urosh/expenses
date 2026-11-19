@@ -443,7 +443,6 @@
     // 2. DATA STORE (NO HARDCODED DEMO DATA)
     // =========================================================================
     const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwMzOOzwMwoJ04PqLM7gpBds5b1DuYR_-Ws8-ypSyz0IyRfYcgGF5GxiB9p35i8jfG4Rw/exec";
-
     const defaultStages = [
       { id: "1", name: "Advance", amount: 50000 },
       { id: "2", name: "Material Procurement", amount: 0 },
@@ -1208,7 +1207,8 @@
                   <div class="min-w-0">
                     <div class="font-bold text-xs text-slate-900">${item.title}</div>
                     ${item.info ? `<p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">${item.info}</p>` : ''}
-                    ${(item.qty || item.rate) ? `<div class="flex items-center gap-2 mt-1.5 text-[10.5px] font-semibold text-slate-500">${item.qty ? `<span class="bg-slate-100 px-2 py-0.5 rounded-md">Qty: ${item.qty}</span>` : ''}${item.rate ? `<span class="bg-slate-100 px-2 py-0.5 rounded-md">Rate: ₹${item.rate}</span>` : ''}</div>` : ''}
+                    ${(item.qty || item.rate) ? `<div class="flex items-center gap-2 mt-1.5 text-[10.5px] font-semibold text-slate-500">
+					${item.rate ? `<span class="bg-slate-100 px-2 py-0.5 rounded-md">Rate: ₹${item.rate}</span>` : ''}</div>` : ''}
                   </div>
                   ${item.total && !isNaN(Number(item.total)) ? `<div class="font-display font-extrabold text-xs text-indigo-700 shrink-0">${formatINR(item.total)}</div>` : ''}
                 </div>
