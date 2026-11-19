@@ -443,7 +443,7 @@
     // =========================================================================
     // 2. DATA STORE & DEMO SEED
     // =========================================================================
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwl3-XEnSr3JLehmkX9NORJwM2II9aD236eo5RVJg4LW9g7y49tXsWFCDSwzBcU1_36FQ/exec";
+    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxCBFgbrRtV3bG0YAATtRD0QYMUlHVAycJhnyNL5NSYXePvtTcfLrFv5OfXpTvvhk1glg/exec";
 
     const defaultStages = [
       { id: "1", name: "Advance", amount: 500000 },
@@ -1707,9 +1707,21 @@
       event.target.value = '';
     }
 
+    // Fix: Ensure deleting a client also updates Google Sheets
+    function executeDeleteClient() {
+      const idx = db.clients.findIndex(c => c.id === db.activeClientId);
+      if (idx === -1) return;
+      const deletedName = db.clients[idx].name;
+      db.clients.splice(idx, 1);
+      db.activeClientId = db.clients[0]?.id || null;
+      selectedSheetId = db.clients[0]?.sheets?.[0]?.id || '';
+      closeModal();
+      saveData(true); // <-- Changed from false to true so Sheet stays in sync
+      showToast(`Removed "${deletedName}"`, '🗑');
+    }
+
     async function syncToGoogleSheet(isManual = false) {
-      const client = getActiveClient();
-      if (!client) return;
+      if (!db || !Array.isArray(db.clients)) return;
       const syncIcon = document.getElementById('sync-icon');
       const statusTxt = document.getElementById('sync-status-text');
       const syncPill = document.getElementById('sync-pill');
@@ -1717,30 +1729,110 @@
       if (statusTxt) statusTxt.innerText = 'Syncing...';
 
       try {
+        // Send ALL clients (excluding heavy base64/parsed Excel sheets) so no client is ever overwritten
+        const clientsPayload = db.clients.map(c => ({
+          id: c.id,
+          name: c.name,
+          totalAmount: c.totalAmount,
+          lastPayment: c.lastPayment,
+          notes: c.notes,
+          reminders: c.reminders,
+          stages: c.stages || [],
+          expenses: c.expenses || [],
+          payments: c.payments || []
+        }));
+
         const res = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
-          method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'syncAll', clientName: client.name || 'Default Client', expenses: client.expenses || [], payments: client.payments || [] })
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'syncAllClients',
+            clients: clientsPayload
+          })
         });
         const data = await res.json();
         if (data.status === 'success') {
           const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           if (statusTxt) statusTxt.innerText = `Synced ${timeStr}`;
           if (syncPill) syncPill.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/70';
-          if (isManual) showToast('Synced with Google Sheet!', '☁️');
+          if (isManual) showToast(`Synced all ${data.clientsCount} clients!`, '☁️');
+        } else {
+          throw new Error(data.message || 'Sync error');
         }
       } catch (err) {
         if (statusTxt) statusTxt.innerText = 'Offline Saved';
         if (syncPill) syncPill.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70';
         if (isManual) showToast('Saved locally (Offline mode)', '💾');
-      } finally { if (syncIcon) syncIcon.classList.remove('spin-icon'); }
+      } finally {
+        if (syncIcon) syncIcon.classList.remove('spin-icon');
+      }
+    }
+
+    async function syncFromGoogleSheetOnBoot() {
+      const syncIcon = document.getElementById('sync-icon');
+      const statusTxt = document.getElementById('sync-status-text');
+      const syncPill = document.getElementById('sync-pill');
+      if (syncIcon) syncIcon.classList.add('spin-icon');
+      if (statusTxt) statusTxt.innerText = 'Loading Sheet...';
+
+      try {
+        const res = await fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=getAll&t=${Date.now()}`, {
+          method: 'GET',
+          mode: 'cors'
+        });
+        const data = await res.json();
+
+        if (data.status === 'success' && Array.isArray(data.clients)) {
+          if (data.clients.length > 0) {
+            // Preserve locally uploaded BOQ Excel sheets per client
+            const existingById = {};
+            const existingByName = {};
+            (db.clients || []).forEach(c => {
+              existingById[c.id] = c;
+              existingByName[c.name.toLowerCase()] = c;
+            });
+
+            db.clients = data.clients.map(remoteClient => {
+              const localMatch = existingById[remoteClient.id] || existingByName[remoteClient.name.toLowerCase()];
+              return {
+                ...remoteClient,
+                sheets: localMatch?.sheets || []
+              };
+            });
+
+            // Keep active client if it still exists, otherwise default to first client
+            if (!db.clients.some(c => c.id === db.activeClientId)) {
+              db.activeClientId = db.clients[0].id;
+            }
+            const active = getActiveClient();
+            selectedSheetId = active?.sheets?.[0]?.id || '';
+
+            localStorage.setItem('luxbuild_pwa_db', JSON.stringify(db));
+            render();
+          }
+
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          if (statusTxt) statusTxt.innerText = `Synced ${timeStr}`;
+          if (syncPill) syncPill.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/70';
+        }
+      } catch (err) {
+        console.warn('Boot sync skipped (offline or network error):', err);
+        if (statusTxt) statusTxt.innerText = 'Offline Mode';
+        if (syncPill) syncPill.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70';
+      } finally {
+        if (syncIcon) syncIcon.classList.remove('spin-icon');
+      }
     }
 
     function manualSyncToGoogleSheet() {
-      if (!getActiveClient()) { showToast('Select or create a client first', '⚠️'); return; }
+      if (!db || db.clients.length === 0) { showToast('Create a client first', '⚠️'); return; }
       syncToGoogleSheet(true);
     }
 
+    // Initial render from local cache immediately, then pull latest from Google Sheet
     render();
+    window.addEventListener('DOMContentLoaded', syncFromGoogleSheetOnBoot);
   </script>
 </body>
 </html>
