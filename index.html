@@ -442,7 +442,7 @@
     // =========================================================================
     // 2. DATA STORE (NO HARDCODED DEMO DATA)
     // =========================================================================
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxCBFgbrRtV3bG0YAATtRD0QYMUlHVAycJhnyNL5NSYXePvtTcfLrFv5OfXpTvvhk1glg/exec";
+    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwMzOOzwMwoJ04PqLM7gpBds5b1DuYR_-Ws8-ypSyz0IyRfYcgGF5GxiB9p35i8jfG4Rw/exec";
 
     const defaultStages = [
       { id: "1", name: "Advance", amount: 50000 },
@@ -1031,21 +1031,24 @@
           return;
         }
         listEl.innerHTML = stagePays.map(p => `
-          <div class="swipe-wrapper !mb-1.5 !rounded-xl">
-            <div class="swipe-bg !rounded-xl bg-gradient-to-r from-indigo-600 to-rose-600 text-[11px]"><span>✎ Edit</span><span>Delete 🗑</span></div>
-            <div id="pay-row-${p.id}" class="swipe-card !rounded-xl bg-slate-50/90 border border-slate-200/70 px-3 py-2 flex items-center justify-between text-xs">
-              <div class="flex items-center gap-2">
-                <span class="text-emerald-600 font-bold">↙</span>
-                <div><span class="font-semibold text-slate-700">${p.date}</span><span class="text-[10.5px] text-slate-400 ml-1">(${p.mode})</span></div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="font-display font-extrabold text-emerald-700">+${formatINR(p.amount)}</span>
-                <button onclick="openEditPaymentModal('${p.id}')" class="text-slate-400 hover:text-indigo-600 text-xs cursor-pointer">✎</button>
-                <button onclick="deletePayment('${p.id}')" class="text-slate-400 hover:text-rose-600 text-xs cursor-pointer">✕</button>
-              </div>
-            </div>
-          </div>
-        `).join('');
+		  <div class="swipe-wrapper !mb-1.5 !rounded-xl">
+			<div class="swipe-bg !rounded-xl bg-gradient-to-r from-indigo-600 to-rose-600 text-[11px]"><span>✎ Edit</span><span>Delete 🗑</span></div>
+			<div id="pay-row-${p.id}" class="swipe-card !rounded-xl bg-slate-50/90 border border-slate-200/70 px-3 py-2 flex items-center justify-between gap-2 text-xs">
+			  <div class="flex items-center gap-2 min-w-0">
+				<span class="text-emerald-600 font-bold shrink-0">↙</span>
+				<div class="min-w-0">
+				  <div class="font-bold text-slate-800 truncate">${p.title || 'Payment Received'}</div>
+				  <div class="text-[10.5px] text-slate-400">${p.date} • ${p.mode}</div>
+				</div>
+			  </div>
+			  <div class="flex items-center gap-2 shrink-0">
+				<span class="font-display font-extrabold text-emerald-700">+${formatINR(p.amount)}</span>
+				<button onclick="openEditPaymentModal('${p.id}')" class="text-slate-400 hover:text-indigo-600 text-xs cursor-pointer">✎</button>
+				<button onclick="deletePayment('${p.id}')" class="text-slate-400 hover:text-rose-600 text-xs cursor-pointer">✕</button>
+			  </div>
+			</div>
+		  </div>
+		`).join('');
 
         stagePays.forEach(p => {
           const el = document.getElementById(`pay-row-${p.id}`);
@@ -1059,7 +1062,15 @@
       const amt = parseFloat(input?.value);
       if (!amt || amt <= 0) { showToast('Enter a valid receipt amount', '⚠️'); return; }
       const client = getActiveClient();
-      client.payments.unshift({ id: 'p_' + Date.now(), stageId, amount: amt, mode: 'UPI', date: new Date().toISOString().split('T')[0] });
+      const stageName = client.stages.find(s => s.id === stageId)?.name || 'Stage Payment';
+      client.payments.unshift({
+        id: 'p_' + Date.now(),
+        stageId,
+        title: `${stageName} Receipt`,
+        amount: amt,
+        mode: 'UPI',
+        date: new Date().toISOString().split('T')[0]
+      });
       client.lastPayment = `${formatINR(amt)} (Today)`;
       saveData();
       showToast(`Logged ${formatINR(amt)} receipt!`, '💳');
@@ -1379,11 +1390,31 @@
           <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold cursor-pointer">✕</button>
         </div>
         <form onsubmit="savePayment(event)" class="space-y-3">
-          <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Stage Milestone</label><select id="pay-stage-id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">${client.stages.map(s => `<option value="${s.id}" ${s.id === selStage ? 'selected' : ''}>${s.name}</option>`).join('')}</select></div>
-          <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Amount Received (₹)</label><input type="number" id="pay-amount" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold"></div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Stage Milestone</label>
+            <select id="pay-stage-id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+              ${client.stages.map(s => `<option value="${s.id}" ${s.id === selStage ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Title / Note</label>
+            <input type="text" id="pay-title" required placeholder="e.g. Advance Cheque / Material Tranche 1" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Amount Received (₹)</label>
+            <input type="number" id="pay-amount" required placeholder="Enter amount" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold">
+          </div>
           <div class="grid grid-cols-2 gap-2.5">
-            <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Mode</label><select id="pay-mode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"><option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option></select></div>
-            <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Date</label><input type="date" id="pay-date" value="${new Date().toISOString().split('T')[0]}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Mode</label>
+              <select id="pay-mode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+                <option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Date</label>
+              <input type="date" id="pay-date" value="${new Date().toISOString().split('T')[0]}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+            </div>
           </div>
           <button type="submit" class="w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm cursor-pointer mt-2">Add Payment Receipt</button>
         </form>
@@ -1394,8 +1425,16 @@
       e.preventDefault();
       const client = getActiveClient();
       const amt = Number(document.getElementById('pay-amount').value) || 0;
-      client.payments.unshift({ id: 'p_' + Date.now(), stageId: document.getElementById('pay-stage-id').value, amount: amt, mode: document.getElementById('pay-mode').value, date: document.getElementById('pay-date').value });
-      client.lastPayment = `${formatINR(amt)} (Today)`;
+      const title = document.getElementById('pay-title').value.trim() || 'Payment Received';
+      client.payments.unshift({
+        id: 'p_' + Date.now(),
+        stageId: document.getElementById('pay-stage-id').value,
+        title,
+        amount: amt,
+        mode: document.getElementById('pay-mode').value,
+        date: document.getElementById('pay-date').value
+      });
+      client.lastPayment = `${title} — ${formatINR(amt)} (Today)`;
       closeModal();
       saveData();
       showToast(`Logged ${formatINR(amt)} receipt!`, '💳');
@@ -1406,13 +1445,36 @@
       const p = client?.payments.find(x => x.id === paymentId);
       if (!p) return;
       openModal(`
-        <div class="flex items-center justify-between mb-4"><h3 class="font-display font-extrabold text-base text-slate-900">Edit Payment Receipt</h3><button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold cursor-pointer">✕</button></div>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display font-extrabold text-base text-slate-900">Edit Payment Receipt</h3>
+          <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold cursor-pointer">✕</button>
+        </div>
         <form onsubmit="saveEditedPayment(event, '${paymentId}')" class="space-y-3">
-          <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Stage</label><select id="edit-pay-stage-id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">${client.stages.map(s => `<option value="${s.id}" ${s.id === p.stageId ? 'selected' : ''}>${s.name}</option>`).join('')}</select></div>
-          <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Amount Received (₹)</label><input type="number" id="edit-pay-amount" value="${p.amount}" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold"></div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Stage</label>
+            <select id="edit-pay-stage-id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+              ${client.stages.map(s => `<option value="${s.id}" ${s.id === p.stageId ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Title / Note</label>
+            <input type="text" id="edit-pay-title" value="${p.title || ''}" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Amount Received (₹)</label>
+            <input type="number" id="edit-pay-amount" value="${p.amount}" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold">
+          </div>
           <div class="grid grid-cols-2 gap-2.5">
-            <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Mode</label><select id="edit-pay-mode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">${['UPI', 'Bank Transfer', 'Cash', 'Cheque'].map(m => `<option ${m === p.mode ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
-            <div><label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Date</label><input type="date" id="edit-pay-date" value="${p.date}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold"></div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Mode</label>
+              <select id="edit-pay-mode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+                ${['UPI', 'Bank Transfer', 'Cash', 'Cheque'].map(m => `<option ${m === p.mode ? 'selected' : ''}>${m}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Date</label>
+              <input type="date" id="edit-pay-date" value="${p.date}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold">
+            </div>
           </div>
           <button type="submit" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm cursor-pointer mt-2">Update Receipt</button>
         </form>
@@ -1424,7 +1486,14 @@
       const client = getActiveClient();
       const idx = client.payments.findIndex(p => p.id === paymentId);
       if (idx !== -1) {
-        client.payments[idx] = { id: paymentId, stageId: document.getElementById('edit-pay-stage-id').value, amount: Number(document.getElementById('edit-pay-amount').value) || 0, mode: document.getElementById('edit-pay-mode').value, date: document.getElementById('edit-pay-date').value };
+        client.payments[idx] = {
+          id: paymentId,
+          stageId: document.getElementById('edit-pay-stage-id').value,
+          title: document.getElementById('edit-pay-title').value.trim() || 'Payment Received',
+          amount: Number(document.getElementById('edit-pay-amount').value) || 0,
+          mode: document.getElementById('edit-pay-mode').value,
+          date: document.getElementById('edit-pay-date').value
+        };
         closeModal();
         saveData();
         showToast('Payment receipt updated', '✓');
@@ -1611,7 +1680,14 @@
           reminders: c.reminders,
           stages: c.stages || [],
           expenses: c.expenses || [],
-          payments: c.payments || []
+          payments: c.payments || [].map(pay => ({
+			  id: pay.id,
+			  stageId: pay.stageId,
+			  title: pay.title || 'Payment Received',
+			  amount: pay.amount,
+			  mode: pay.mode,
+			  date: pay.date
+			}))
         }));
 
         const res = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
