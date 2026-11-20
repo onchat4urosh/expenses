@@ -442,7 +442,8 @@
     // =========================================================================
     // 2. DATA STORE (NO HARDCODED DEMO DATA)
     // =========================================================================
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwMzOOzwMwoJ04PqLM7gpBds5b1DuYR_-Ws8-ypSyz0IyRfYcgGF5GxiB9p35i8jfG4Rw/exec";
+    //const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwMzOOzwMwoJ04PqLM7gpBds5b1DuYR_-Ws8-ypSyz0IyRfYcgGF5GxiB9p35i8jfG4Rw/exec";
+	const GOOGLE_SHEET_WEB_APP_URL = "";
     const defaultStages = [
       { id: "1", name: "Advance", amount: 50000 },
       { id: "2", name: "Material Procurement", amount: 0 },
@@ -1141,10 +1142,10 @@
           if (!currentSection) { currentSection = { headline: 'General Specifications', items: [] }; sections.push(currentSection); }
           currentSection.items.push({
             title: col0,
-            qty: row[1] !== undefined ? String(row[1]).trim() : '',
-            rate: row[2] !== undefined ? String(row[2]).trim() : '',
-            total: row[3] !== undefined ? String(row[3]).trim() : '',
-            info: row[4] !== undefined ? String(row[4]).trim() : (row[1] && isNaN(row[1]) ? String(row[1]) : '')
+            qty: row[2] !== undefined ? String(row[2]).trim() : '',
+            rate: row[3] !== undefined ? String(row[3]).trim() : '',
+            total: row[4] !== undefined ? String(row[4]).trim() : '',
+            info: row[1] !== undefined ? String(row[1]).trim() : (row[1] && isNaN(row[1]) ? String(row[1]) : '')
           });
         }
       });
@@ -1157,7 +1158,7 @@
       if (!container || !client) return;
       const sheet = (client.sheets || []).find(s => s.id === selectedSheetId);
       const dynamicHeadlines = sheet ? parseExcelToHeadlines(sheet.data).map(s => s.headline) : [];
-      const merged = Array.from(new Set(['All', 'Kitchen', 'Bedroom', 'Fabrication', 'Loose Furniture', ...dynamicHeadlines]));
+      const merged = Array.from(new Set(['All', ...dynamicHeadlines]));
       container.innerHTML = merged.map(cat => {
         const active = selectedInfoCategoryFilter === cat;
         return `<button onclick="filterInfoByCategory('${cat.replace(/'/g, "\\'")}')" class="px-3 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${active ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}">${cat}</button>`;
@@ -1195,28 +1196,38 @@
         if (matchedItems.length === 0) return;
         const sectionSum = matchedItems.reduce((sum, it) => sum + (parseFloat(String(it.total).replace(/[^0-9.-]+/g, '')) || 0), 0);
 
-        html += `
-          <div class="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs">
-            <div class="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between">
-              <span class="font-display font-bold text-xs tracking-wide uppercase">${sec.headline}</span>
-              ${sectionSum > 0 ? `<span class="text-[11px] font-bold text-emerald-300">${formatINR(sectionSum)}</span>` : ''}
-            </div>
-            <div class="divide-y divide-slate-100">
-              ${matchedItems.map(item => `
-                <div class="p-3.5 flex items-start justify-between gap-3 hover:bg-slate-50/70 transition">
-                  <div class="min-w-0">
-                    <div class="font-bold text-xs text-slate-900">${item.title}</div>
-                    ${item.info ? `<p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">${item.info}</p>` : ''}
-                    ${(item.qty || item.rate) ? `<div class="flex items-center gap-2 mt-1.5 text-[10.5px] font-semibold text-slate-500">
-					${item.rate ? `<span class="bg-slate-100 px-2 py-0.5 rounded-md">Rate: ₹${item.rate}</span>` : ''}</div>` : ''}
-                  </div>
-                  ${item.total && !isNaN(Number(item.total)) ? `<div class="font-display font-extrabold text-xs text-indigo-700 shrink-0">${formatINR(item.total)}</div>` : ''}
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      });
+        html += `<div class="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs">
+			  <div class="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between">
+				<span class="font-display font-bold text-xs tracking-wide uppercase">${sec.headline}</span>
+				${sectionSum > 0 ? `<span class="text-[11px] font-bold text-emerald-300">${formatINR(sectionSum)}</span>` : ''}
+			  </div>
+			  <div class="divide-y divide-slate-100">
+				${matchedItems.map(item => {
+				  const hasQty = item.qty !== undefined && item.qty !== null && String(item.qty).trim() !== '';
+				  const hasRate = item.rate !== undefined && item.rate !== null && String(item.rate).trim() !== '';
+				  const rateDisplay = String(item.rate).trim().toUpperCase() === 'LS'
+					? 'LS'
+					: formatINR(item.rate);
+
+				  return `
+					<div class="p-3.5 flex items-start justify-between gap-3 hover:bg-slate-50/70 transition">
+					  <div class="min-w-0">
+						<div class="font-bold text-xs text-slate-900">${item.title}</div>
+						${item.info ? `<p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">${item.info}</p>` : ''}
+						${(hasQty || hasRate) ? `
+						  <div class="flex items-center gap-2 mt-1.5 text-[10.5px] font-semibold text-slate-500 flex-wrap">
+							${hasQty ? `<span class="bg-slate-100 px-2 py-0.5 rounded-md">Qty: ${String(item.qty).trim()}</span>` : ''}
+							${hasRate ? `<span class="bg-slate-100 px-2 py-0.5 rounded-md">Rate: ${rateDisplay}</span>` : ''}
+						  </div>
+						` : ''}
+					  </div>
+					  ${item.total && !isNaN(Number(item.total)) ? `<div class="font-display font-extrabold text-xs text-indigo-700 shrink-0">${formatINR(item.total)}</div>` : ''}
+					</div>
+				  `;
+				}).join('')}
+			  </div>
+			</div>`;
+		});
 
       container.innerHTML = html || `<div class="text-center text-xs text-slate-400 py-8">No specifications match your search.</div>`;
     }
